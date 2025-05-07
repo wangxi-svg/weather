@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <title>天气预测</title>
+    <!-- Bootstrap core CSS-->
+    <link href="/static/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom fonts for this template-->
+    <link href="/static/vendor/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+    <!-- Page level plugin CSS-->
+    <link href="/static/vendor/datatables/dataTables.bootstrap4.css" rel="stylesheet">
+    <!-- Custom styles for this template-->
+    <link href="/static/css/sb-admin.css" rel="stylesheet">
+</head>
+
+<body class="fixed-nav sticky-footer bg-dark" id="page-top">
+    <!-- Navigation-->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top" id="mainNav">
+        <a class="navbar-brand" href="home.html">天气数据分析系统</a>
+        <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse"
+            data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false"
+            aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarResponsive">
+            <ul class="navbar-nav navbar-sidenav" id="exampleAccordion">
+                <li class="nav-item" data-toggle="tooltip" data-placement="right" title="Dashboard">
+                    <a class="nav-link" href="/home">
+                        <i class="fa fa-fw fa-dashboard"></i>
+                        <span class="nav-link-text">首页</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-toggle="tooltip" data-placement="right" title="Tables">
+                    <a class="nav-link" href="/map">
+                        <i class="fa fa-fw fa-table"></i>
+                        <span class="nav-link-text">天气地图</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-toggle="tooltip" data-placement="right" title="Charts">
+                    <a class="nav-link" href="/search">
+                        <i class="fa fa-fw fa-area-chart"></i>
+                        <span class="nav-link-text">天气分析</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-toggle="tooltip" data-placement="right" title="Tables">
+                    <a class="nav-link" href="/yuce">
+                        <i class="fa fa-fw fa-table"></i>
+                        <span class="nav-link-text">天气预测</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-toggle="tooltip" data-placement="right" title="Tables">
+                    <a class="nav-link" href="/lishi">
+                        <i class="fa fa-fw fa-table"></i>
+                        <span class="nav-link-text">历史天气</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-toggle="tooltip" data-placement="right" title="Tables">
+                    <a class="nav-link" href="/user">
+                        <i class="fa fa-fw fa-table"></i>
+                        <span class="nav-link-text">用户管理</span>
+                    </a>
+                </li>
+            </ul>
+            <ul class="navbar-nav sidenav-toggler">
+                <li class="nav-item">
+                    <a class="nav-link text-center" id="sidenavToggler">
+                        <i class="fa fa-fw fa-angle-left"></i>
+                    </a>
+                </li>
+            </ul>
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item">
+                    <a class="nav-link" data-toggle="modal" data-target="#exampleModal">
+                        <i class="fa fa-fw fa-sign-out"></i>{{ email }}</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    <div class="content-wrapper">
+        <div class="container-fluid">
+            <!-- Breadcrumbs-->
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item active">天气预测</li>
+            </ol>
+
+            <!-- 搜索表单 -->
+            <div class="col-xl-6 col-sm-6 mb-3">
+                <ul class="nav">
+                    <li class="nav-item">
+                        <form id="searchForm">
+                            <div class="input-group">
+                                <input id="content" class="form-control" type="text" placeholder="请输入城市...">
+                                <span class="input-group-btn">
+                                    <button id="searchBtn" class="btn btn-primary" type="submit">
+                                        <i class="fa fa-search"></i> 查询
+                                    </button>
+                                </span>
+                            </div>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 历史天气数据表格 -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <i class="fa fa-table"></i> 最近三天天气数据
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" id="historyTable" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>城市</th>
+                                    <th>日期</th>
+                                    <th>最高温度</th>
+                                    <th>最低温度</th>
+                                    <th>天气</th>
+                                    <th>风向</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 预测天气数据表格 -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <i class="fa fa-table"></i> 未来三天天气预测
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" id="predictionTable" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>城市</th>
+                                    <th>日期</th>
+                                    <th>预测天气</th>
+                                </tr>
+                            </thead>
+                            <tbody id="predictionBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="sticky-footer">
+        <div class="container">
+            <div class="text-center">
+                <small>flask+mysql天气数据分析系统</small>
+            </div>
+        </div>
+    </footer>
+    <!-- Scroll to Top Button-->
+    <a class="scroll-to-top rounded" href="#page-top">
+        <i class="fa fa-angle-up"></i>
+    </a>
+    <!-- Logout Modal-->
+    <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel"></h5>
+                    <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                </div>
+                <div class="modal-body">真的要退出系统了吗？</div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" type="button" data-dismiss="modal">取消</button>
+                    <a class="btn btn-primary" href="/">确定</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap core JavaScript-->
+    <script src="/static/vendor/jquery/jquery.min.js"></script>
+    <script src="/static/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <!-- Core plugin JavaScript-->
+    <script src="/static/vendor/jquery-easing/jquery.easing.min.js"></script>
+    <!-- Custom scripts for all pages-->
+    <script src="/static/js/sb-admin.min.js"></script>
+
+    <script>
+        function formatDate(dateString) {
+            var date = new Date(dateString);
+            var year = date.getFullYear();
+            var month = date.getMonth() + 1;
+            var day = date.getDate();
+            return year + "年" + month + "月" + day + "日";
+        }
+
+        function addDays(date, days) {
+            var result = new Date(date);
+            result.setDate(result.getDate() + days);
+            return result;
+        }
+
+        $("#searchForm").submit(function(event) {
+            event.preventDefault();
+            var city = $("#content").val();
+            
+            $.ajax({
+                type: "POST",
+                url: "/yuce",
+                data: { city: city },
+                dataType: "json",
+                success: function(data) {
+                    // 清空表格
+                    $("#historyBody").empty();
+                    $("#predictionBody").empty();
+
+                    // 显示历史数据
+                    if (data.history) {
+                        data.history.forEach(function(item) {
+                            var row = $("<tr>");
+                            row.append($("<td>").text(item.城市));
+                            row.append($("<td>").text(formatDate(item.日期)));
+                            row.append($("<td>").text(item.最高温度));
+                            row.append($("<td>").text(item.最低温度));
+                            row.append($("<td>").text(item.天气));
+                            row.append($("<td>").text(item.风向));
+                            $("#historyBody").append(row);
+                        });
+                    }
+
+                    // 显示预测数据
+                    if (data.predictions) {
+                        var lastDate = new Date(data.history[data.history.length - 1].日期);
+                        data.predictions.forEach(function(prediction, index) {
+                            var row = $("<tr>");
+                            row.append($("<td>").text(city));
+                            row.append($("<td>").text(formatDate(addDays(lastDate, index + 1))));
+                            row.append($("<td>").text(prediction));
+                            $("#predictionBody").append(row);
+                        });
+                    }
+                },
+                error: function(error) {
+                    console.error("查询过程中发生错误：", error);
+                    alert("查询失败，请稍后重试");
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

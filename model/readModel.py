@@ -1,8 +1,8 @@
 import pandas as pd
 import joblib
-def load_artifacts(model_path='./out/weather_clf_model.joblib',
-                  scaler_path='./out/weather_scaler.joblib',
-                  labels_path='./out/weather_labels.joblib'):
+def load_artifacts(model_path='./model/out/weather_clf_model.joblib',
+                  scaler_path='./model/out/weather_scaler.joblib',
+                  labels_path='./model/out/weather_labels.joblib'):
     """加载训练好的模型、标准化器和标签"""
     model = joblib.load(model_path)
     scaler = joblib.load(scaler_path)
@@ -36,7 +36,7 @@ def preprocess_input(raw_data, window_size=3):
     encoded = pd.get_dummies(df[feature_cols], columns=['前日天气'])
     
     # 对齐特征维度（补充缺失的天气类别列）
-    expected_weather_cols = [f'前日天气_{l}' for l in joblib.load('./out/weather_labels.joblib')]
+    expected_weather_cols = [f'前日天气_{l}' for l in joblib.load('./model/out/weather_labels.joblib')]
     for col in expected_weather_cols:
         if col not in encoded.columns:
             encoded[col] = 0
