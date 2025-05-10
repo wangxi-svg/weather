@@ -1,150 +1,82 @@
 import pandas as pd
-import numpy as np
-import joblib
 import os
+import joblib
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import accuracy_score, classification_report
-from lightgbm import LGBMClassifier
+from sklearn.preprocessing import LabelEncoder
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error
+from math import sqrt
 
-def load_and_preprocess(path='./csv/lishiweathers_data.csv'):
-    df = pd.read_csv(path)
-    df['日期'] = pd.to_datetime(df['日期'])
-    df['月份'] = df['日期'].dt.month
-    df['季节'] = df['月份'].map({1:1, 2:1, 3:1, 4:2, 5:2, 6:2, 7:3, 8:3, 9:3, 10:4, 11:4, 12:4})
-    df['风力等级'] = df['风向'].str.extract(r'(\d+)').astype(float)
-    df['温差'] = df['最高温度'] - df['最低温度']
-    
-    # 增强天气类别合并策略（确保最小样本数）
-    weather_mapping = {
-        '晴': '晴',
-        '多云': '多云',
-        '阴': '多云',
-        '雨': '雨',
-        '雷阵雨': '雨', 
-        '阵雨': '雨',
-        '小雨': '雨',
-        '中雨': '雨',
-        '雪': '雪',
-        '大雪': '雪',
-        '小雪': '雪',
-        '雾': '其他',  # 合并稀有天气到其他
-        '沙尘': '其他'
-    }
-    df['天气'] = df['天气'].map(weather_mapping).fillna('其他')
-    
-    # 确保每个类别至少有2个样本
-    weather_counts = df['天气'].value_counts()
-    valid_categories = weather_counts[weather_counts >= 2].index
-    df = df[df['天气'].isin(valid_categories)]
-    
-    # 添加滚动统计特征
-    df['3日平均温度'] = df['最高温度'].rolling(3).mean()
-    df['前日天气'] = df['天气'].shift(1)
-    df = df.ffill().bfill()
-    
-    return df
+# 1. 读取数据
+path = './csv_output/weatherdata7_data.csv'
+df = pd.read_csv(path)
 
-def create_dataset(df, window_size=3):
-    feature_cols = ['最高温度', '最低温度', '风力等级', '温差', 
-                   '月份', '季节', '3日平均温度', '前日天气']
-    
-    # 动态特征编码
-    df_encoded = pd.get_dummies(df[feature_cols], columns=['前日天气'])
-    
-    X, y = [], []
-    for i in range(len(df) - window_size - 1):
-        hist = df_encoded.iloc[i:i+window_size]
-        label = df.iloc[i+window_size]['天气']
-        X.append(hist.values.flatten())
-        y.append(label)
-    return np.array(X), np.array(y)
+# 2. 特征工程
+df['观测时间'] = pd.to_datetime(df['观测时间'])
+df['月'] = df['观测时间'].dt.month
+df['日'] = df['观测时间'].dt.day
 
-def train_model(X, y):
-    # 调整抽样策略
-    try:
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.15,
-            stratify=y,  # 保留分层抽样但已确保类别有效性
-            random_state=42
-        )
-    except ValueError:
-        # 回退策略：当分层抽样失败时使用普通抽样
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.15,
-            random_state=42
-        )
-    
-    # 改进标准化流程
-    scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-    X_test_scaled = scaler.transform(X_test)
+label_cols = ['白天天气状况', '晚间天气状况', '白天风力', '夜间风力']
+encoders = {}
+for col in label_cols:
+    enc = LabelEncoder()
+    df[col] = enc.fit_transform(df[col])
+    encoders[col] = enc
 
-    # 优化模型参数
-    model = LGBMClassifier(
-        n_estimators=150,
-        learning_rate=0.2,
-        max_depth=5,
-        num_leaves=20,
-        min_child_samples=5,
-        class_weight='balanced',
-        random_state=42,
-        verbosity=-1
-    )
-    
-    # 添加样本权重
-    class_weights = {k: v for k, v in zip(*np.unique(y_train, return_counts=True))}
-    sample_weights = np.array([class_weights[c] for c in y_train])
-    
-    model.fit(X_train_scaled, y_train, sample_weight=1/sample_weights)
-    
-    # 输出优化评估
-    y_pred = model.predict(X_test_scaled)
-    acc = accuracy_score(y_test, y_pred)
-    print(f"\n✅ 模型准确率: {acc:.4f}")
-    print("\n📋 分类报告:\n", classification_report(y_test, y_pred, zero_division=0))
-    
-    os.makedirs('./out', exist_ok=True)
-    joblib.dump(model, './out/weather_clf_model.joblib')
-    joblib.dump(scaler, './out/weather_scaler.joblib')
-    joblib.dump(np.unique(y).tolist(), './out/weather_labels.joblib')
-    return model, scaler
+# 构造滞后特征（前一天温度）
+df['前一天最高温度'] = df['最高温度'].shift(1)
+df['前一天最低温度'] = df['最低温度'].shift(1)
+df = df.dropna()
 
-def predict_next_day(model, df, scaler):
-    feature_cols = ['最高温度', '最低温度', '风力等级', '温差', 
-                   '月份', '季节', '3日平均温度', '前日天气']
-    df_encoded = pd.get_dummies(df[feature_cols], columns=['前日天气'])
-    
-    # 对齐特征维度
-    recent = df_encoded[-3:].values.flatten().reshape(1, -1)
-    recent_scaled = scaler.transform(recent)
-    
-    pred = model.predict(recent_scaled)[0]
-    print(f"\n📅 预测明天天气：{pred}")
-    return pred
+# 3. 特征与标签
+features = ['月', '日', '白天天气状况', '晚间天气状况', '白天风力', '夜间风力',
+            '紫外线', '湿度', '能见度', '云量', '前一天最高温度', '前一天最低温度']
+X = df[features]
+y_high = df['最高温度']
+y_low = df['最低温度']
 
-def main():
-    df = load_and_preprocess()
-    X, y = create_dataset(df)
-    model, scaler = train_model(X, y)
-    predict_next_day(model, df, scaler)
+# 4. 拆分数据
+X_train, X_test, y_high_train, y_high_test = train_test_split(X, y_high, test_size=0.2, random_state=42)
+_, _, y_low_train, y_low_test = train_test_split(X, y_low, test_size=0.2, random_state=42)
 
-if __name__ == '__main__':
-    main()
-# ✅ 模型准确率: 0.1279
+# 5. 模型训练
+high_model = RandomForestRegressor(random_state=42)
+low_model = RandomForestRegressor(random_state=42)
+high_model.fit(X_train, y_high_train)
+low_model.fit(X_train, y_low_train)
 
-# 📋 分类报告:
-#                precision    recall  f1-score   support
+# 6. 模型评估
+high_pred = high_model.predict(X_test)
+low_pred = low_model.predict(X_test)
+high_rmse = sqrt(mean_squared_error(y_high_test, high_pred))
+low_rmse = sqrt(mean_squared_error(y_low_test, low_pred))
+print(f"最高温度 RMSE: {high_rmse:.2f}")
+print(f"最低温度 RMSE: {low_rmse:.2f}")
 
-#           其他       0.56      0.05      0.10      7443
-#           多云       0.44      0.02      0.03      7491
-#            晴       0.29      0.30      0.29      3440
-#            雨       0.08      0.76      0.14      1212
-#            雪       0.01      0.44      0.03        93
+# 7. 保存模型
+os.makedirs('./out', exist_ok=True)
+joblib.dump(high_model, './out/high_temp_model.pkl')
+joblib.dump(low_model, './out/low_temp_model.pkl')
+joblib.dump(encoders, './out/label_encoders.pkl')
 
-#     accuracy                           0.13     19679
-#    macro avg       0.27      0.31      0.12     19679
-# weighted avg       0.43      0.13      0.11     19679
+# 8. 预测未来3-7天（以最近一天为基础，模拟构造数据）
+last_day = df.iloc[-1].copy()
+future_days = []
+for i in range(3, 8):
+    new_day = last_day.copy()
+    new_day['观测时间'] = new_day['观测时间'] + pd.Timedelta(days=i)
+    new_day['月'] = new_day['观测时间'].month
+    new_day['日'] = new_day['观测时间'].day
+    # 假设天气状况等维持不变
+    new_day['前一天最高温度'] = last_day['最高温度']
+    new_day['前一天最低温度'] = last_day['最低温度']
+    future_days.append(new_day)
 
+future_df = pd.DataFrame(future_days)
+X_future = future_df[features]
+future_high = high_model.predict(X_future)
+future_low = low_model.predict(X_future)
 
-# 📅 预测明天天气：晴
+# 9. 输出预测结果
+for i, row in future_df.iterrows():
+    print(f"{row['观测时间'].date()} -> 预测最高温度: {future_high[i]:.1f}°C, 最低温度: {future_low[i]:.1f}°C")

@@ -1,0 +1,8 @@
+Field,Type,Null,Key,Default,Extra
+id,int,NO,PRI,,auto_increment
+城市,varchar(255),YES,,,
+日期,date,YES,,,
+最高温度,float,YES,,,
+最低温度,float,YES,,,
+天气,varchar(255),YES,,,
+风向,varchar(255),YES,,,

@@ -1,0 +1,15 @@
+Field,Type,Null,Key,Default,Extra
+id,int,NO,PRI,,auto_increment
+城市,varchar(255),YES,,,
+观测时间,date,YES,,,
+最高温度,float,YES,,,
+最低温度,float,YES,,,
+白天天气状况,varchar(255),YES,,,
+晚间天气状况,varchar(255),YES,,,
+白天风力,varchar(255),YES,,,
+夜间风力,varchar(255),YES,,,
+降水量,varchar(255),YES,,,
+紫外线,float,YES,,,
+湿度,float,YES,,,
+能见度,float,YES,,,
+云量,float,YES,,,

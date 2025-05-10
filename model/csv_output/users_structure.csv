@@ -1,0 +1,5 @@
+Field,Type,Null,Key,Default,Extra
+id,int,NO,PRI,,auto_increment
+username,varchar(255),NO,,,
+email,varchar(255),NO,,,
+password,varchar(255),NO,,,

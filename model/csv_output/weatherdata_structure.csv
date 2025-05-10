@@ -1,0 +1,10 @@
+Field,Type,Null,Key,Default,Extra
+id,int,NO,PRI,,auto_increment
+城市,varchar(255),YES,,,
+时间,varchar(255),YES,,,
+温度,float,YES,,,
+体感温度,float,YES,,,
+天气情况,varchar(255),YES,,,
+风力等级,varchar(255),YES,,,
+湿度,float,YES,,,
+能见度,float,YES,,,
