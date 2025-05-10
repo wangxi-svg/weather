@@ -7,7 +7,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, classification_report
 from lightgbm import LGBMClassifier
 
-def load_and_preprocess(path='./csv/lishiweathers_data.csv'):
+def load_and_preprocess(path='./new/lishiweathers_data.csv'):
     df = pd.read_csv(path)
     df['日期'] = pd.to_datetime(df['日期'])
     df['月份'] = df['日期'].dt.month
@@ -109,25 +109,60 @@ def train_model(X, y):
     joblib.dump(scaler, './out/weather_scaler.joblib')
     joblib.dump(np.unique(y).tolist(), './out/weather_labels.joblib')
     return model, scaler
-
-def predict_next_day(model, df, scaler):
+def predict_future_days(model, df, scaler, days=7):
     feature_cols = ['最高温度', '最低温度', '风力等级', '温差', 
-                   '月份', '季节', '3日平均温度', '前日天气']
-    df_encoded = pd.get_dummies(df[feature_cols], columns=['前日天气'])
-    
-    # 对齐特征维度
-    recent = df_encoded[-3:].values.flatten().reshape(1, -1)
-    recent_scaled = scaler.transform(recent)
-    
-    pred = model.predict(recent_scaled)[0]
-    print(f"\n📅 预测明天天气：{pred}")
-    return pred
+                    '月份', '季节', '3日平均温度', '前日天气']
+    all_categories = pd.get_dummies(df['前日天气']).columns
 
+    future_preds = []
+
+    df_copy = df.copy()
+
+    for day in range(days):
+        df_encoded = pd.get_dummies(df_copy[feature_cols], columns=['前日天气'])
+        
+        # 对齐特征列
+        for col in all_categories:
+            if f"前日天气_{col}" not in df_encoded.columns:
+                df_encoded[f"前日天气_{col}"] = 0
+        df_encoded = df_encoded[[col for col in df_encoded.columns if col.startswith("最高温度") or "前日天气" in col or col in feature_cols]]
+
+        recent = df_encoded[-3:].values.flatten().reshape(1, -1)
+        recent_scaled = scaler.transform(recent)
+
+        pred = model.predict(recent_scaled)[0]
+        future_preds.append(pred)
+
+        # 用预测结果构造下一行（模拟下一天）
+        last_row = df_copy.iloc[-1].copy()
+        next_day = last_row['日期'] + pd.Timedelta(days=1)
+        next_month = next_day.month
+        next_season = {1:1, 2:1, 3:1, 4:2, 5:2, 6:2, 7:3, 8:3, 9:3, 10:4, 11:4, 12:4}[next_month]
+
+        # 模拟下一天的数据（你也可以接入预测模型输出或规则）
+        next_row = {
+            '日期': next_day,
+            '最高温度': last_row['最高温度'],
+            '最低温度': last_row['最低温度'],
+            '风力等级': last_row['风力等级'],
+            '温差': last_row['温差'],
+            '月份': next_month,
+            '季节': next_season,
+            '3日平均温度': df_copy['最高温度'].iloc[-3:].mean(),
+            '前日天气': pred,
+            '天气': pred
+        }
+        df_copy = pd.concat([df_copy, pd.DataFrame([next_row])], ignore_index=True)
+
+    print(f"\n📅 未来 {days} 天预测结果：{future_preds}")
+    return future_preds
+
+    
 def main():
     df = load_and_preprocess()
     X, y = create_dataset(df)
     model, scaler = train_model(X, y)
-    predict_next_day(model, df, scaler)
+    predict_future_days(model, df, scaler, days=7)
 
 if __name__ == '__main__':
     main()
